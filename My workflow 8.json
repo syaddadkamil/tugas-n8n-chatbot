@@ -1,0 +1,158 @@
+{
+  "name": "My workflow 8",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        0
+      ],
+      "id": "707980d5-133b-4511-b0f7-cb7a582e9bd4",
+      "name": "When chat message received",
+      "webhookId": "9303c635-c2e1-4645-a8e7-dc358d10f3c9"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "\"Kamu adalah asisten customer service yang ramah. Tugasmu adalah menjawab pertanyaan pengguna mengenai jenis program pelatihan, nama pelatihan, dan deskripsinya berdasarkan data dari Google Sheets. Gunakan tool Google Sheets untuk mencari informasi secara akurat.\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        224,
+        0
+      ],
+      "id": "a31952f2-0e52-428d-b2d5-061c3c251691",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        148.92266666666671,
+        208
+      ],
+      "id": "b8dbfaab-6cd2-4241-89bb-30d55306f183",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "6kVibFzzBtKyMsv5",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        272,
+        368
+      ],
+      "id": "13e1bf75-f950-40bd-8c99-5613976ceae6",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "13vW_1y3NGPeTo902cTPL69E2qBblvI-vc-Fp1qddE6g",
+          "mode": "list",
+          "cachedResultName": "Data pelatihan n8n ",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13vW_1y3NGPeTo902cTPL69E2qBblvI-vc-Fp1qddE6g/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13vW_1y3NGPeTo902cTPL69E2qBblvI-vc-Fp1qddE6g/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        384,
+        208
+      ],
+      "id": "80923733-6583-4a55-aac0-5abe456593b3",
+      "name": "Get row(s) in sheet in Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "01lbAHZ8mkWLgAg9",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet in Google Sheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f5cac1e7-6819-4507-8a8e-9258ce796cc4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dc96f10ae7dc95d3c138575ba243a0a167923dbcb524841d451aadf9135d5fb3"
+  },
+  "nodeGroups": [],
+  "id": "7iBnZv8G7KQEdm1O",
+  "tags": []
+}
