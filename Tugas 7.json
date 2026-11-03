@@ -1,0 +1,274 @@
+{
+  "name": "Tugas 7",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtDay": [
+                1
+              ],
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "id": "ad9b4943-31fa-459d-9a26-a1d85683c52f",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1ZyQygLShTS-OFETzyftrdXVVMmlAZ12ClD6VBaFL-pA/edit?usp=sharing",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "",
+          "mode": "list",
+          "cachedResultName": "",
+          "cachedResultUrl": ""
+        }
+      },
+      "id": "c0fafee4-fc50-4ecc-9dfe-2f42227c4abd",
+      "name": "Get Pengeluaran (Google Sheets)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        112
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "qFYYMS7Q4SDG0IF3",
+          "name": "Google Sheets account 6"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Kosongkan untuk memakai tanggal hari ini. Untuk TES dengan data April 2026, isi: '2026-04-19'\nconst REF_DATE = '';\n\nconst DAY = 24 * 60 * 60 * 1000;\nconst now = REF_DATE ? new Date(REF_DATE) : new Date();\nconst end = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());\nconst start = end - 6 * DAY; // 7 hari terakhir termasuk hari ini\n\nfunction parseDate(v) {\n  if (v === undefined || v === null || v === '') return null;\n  if (typeof v === 'number') return new Date(Math.round((v - 25569) * DAY)); // serial Sheets\n  const s = String(v).trim();\n  const m = s.match(/^(\\d{1,2})\\/(\\d{1,2})\\/(\\d{4})/); // dd/mm/yyyy\n  if (m) return new Date(Date.UTC(+m[3], +m[2] - 1, +m[1]));\n  const d = new Date(s);\n  return isNaN(d) ? null : d;\n}\nconst rp = n => 'Rp' + Number(n).toLocaleString('id-ID');\n\nconst data = [];\nfor (const item of $input.all()) {\n  const r = item.json;\n  const d = parseDate(r['Tanggal']);\n  if (!d) continue;\n  const t = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());\n  if (t < start || t > end) continue;\n  data.push({\n    tanggal: String(r['Tanggal']),\n    kategori: r['Kategori'],\n    deskripsi: r['Deskripsi'],\n    metode: r['Metode Pembayaran'],\n    jumlah: Number(String(r['Jumlah (IDR)']).replace(/[^0-9.-]/g, '')) || 0,\n    penerima: r['Penerima'],\n  });\n}\n\nconst total = data.reduce((a, b) => a + b.jumlah, 0);\nconst dataTeks = data\n  .map(x => `- ${x.tanggal} | ${x.kategori} | ${x.deskripsi} | ${x.metode} | ${rp(x.jumlah)} | ${x.penerima}`)\n  .join('\\n');\n\nreturn [{ json: {\n  jumlahTransaksi: data.length,\n  totalPengeluaran: total,\n  periode: `${new Date(start).toISOString().slice(0,10)} s/d ${new Date(end).toISOString().slice(0,10)}`,\n  dataTeks,\n  data,\n}}];"
+      },
+      "id": "1b059450-3af3-49f1-a41b-a9c4659cacfb",
+      "name": "Filter 7 Hari Terakhir",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        448,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.jumlahTransaksi }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7e1e0508-843e-4997-899e-7d6ac610c5ca",
+      "name": "Ada Data?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        672,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "GANTI_DENGAN_CHAT_ID",
+        "text": "Nihil",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "b6e3bbcb-45fe-4d66-a908-9954331d448b",
+      "name": "Telegram - Nihil",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1072,
+        480
+      ],
+      "webhookId": "4f9a854f-1b18-400b-820e-2b2d2dd5b4b8",
+      "credentials": {
+        "telegramApi": {
+          "id": "zHFmAii4biMDX4t0",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Kamu adalah penasihat keuangan pribadi. Berikut data pengeluaran 7 hari terakhir ({{ $json.periode }}).\nJumlah transaksi: {{ $json.jumlahTransaksi }}\nTotal pengeluaran: Rp{{ $json.totalPengeluaran.toLocaleString('id-ID') }}\n\nData (Tanggal | Kategori | Deskripsi | Metode Pembayaran | Jumlah | Penerima):\n{{ $json.dataTeks }}\n\nTugasmu:\n1. Analisis kebiasaan belanja (kategori terbesar, pola waktu, metode pembayaran yang dominan).\n2. Berikan TEPAT SATU saran penghematan yang konkret dan bisa langsung dilakukan, lengkap dengan perkiraan nominal hematnya.\n\nJawab dalam Bahasa Indonesia, singkat (maks 150 kata), format teks biasa tanpa markdown/simbol * atau _ , dengan dua bagian: 'Analisis:' dan 'Saran:'."
+      },
+      "id": "119a7c42-a6c8-4046-89f4-6417916c10e8",
+      "name": "AI Analisis Pengeluaran",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        912,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "a150bea4-e589-4bf2-b283-4cdb20e3896e",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        928,
+        224
+      ],
+      "credentials": {
+        "googlePalmApi": {
+          "id": "hQxr1tipYdebAl67",
+          "name": "Google Gemini(PaLM) Api account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "GANTI_DENGAN_CHAT_ID",
+        "text": "={{ '📊 Laporan Pengeluaran Mingguan\\n' + $('Filter 7 Hari Terakhir').item.json.periode + '\\n\\n' + $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "8bcb1624-1b21-4cbd-a136-b858d2f6ee22",
+      "name": "Telegram - Hasil Analisis",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1264,
+        0
+      ],
+      "webhookId": "90feb873-a054-4fb6-aea3-37441e70540b",
+      "credentials": {
+        "telegramApi": {
+          "id": "zHFmAii4biMDX4t0",
+          "name": "Telegram account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Pengeluaran (Google Sheets)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pengeluaran (Google Sheets)": {
+      "main": [
+        [
+          {
+            "node": "Filter 7 Hari Terakhir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter 7 Hari Terakhir": {
+      "main": [
+        [
+          {
+            "node": "Ada Data?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ada Data?": {
+      "main": [
+        [
+          {
+            "node": "AI Analisis Pengeluaran",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Telegram - Nihil",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Analisis Pengeluaran",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Analisis Pengeluaran": {
+      "main": [
+        [
+          {
+            "node": "Telegram - Hasil Analisis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "fa95ecb7-c782-4139-9cac-268d311f398b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "dc96f10ae7dc95d3c138575ba243a0a167923dbcb524841d451aadf9135d5fb3"
+  },
+  "nodeGroups": [],
+  "id": "XN14MviSOSraL5tg",
+  "tags": []
+}
