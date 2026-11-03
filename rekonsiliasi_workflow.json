@@ -1,0 +1,306 @@
+{
+  "name": "Tugas 4 - Rekonsiliasi Transaksi Internal vs Mutasi Bank",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "n1",
+      "name": "Start (Manual / ganti Schedule)",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "GANTI_DENGAN_SPREADSHEET_ID",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "Sheet1",
+          "mode": "name"
+        },
+        "options": {}
+      },
+      "id": "n2",
+      "name": "Google Sheets - Data Internal",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        260,
+        180
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "GANTI_DENGAN_FILE_ID_CSV",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "n3",
+      "name": "Google Drive - Mutasi Bank CSV",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        260,
+        420
+      ],
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "csv",
+        "options": {}
+      },
+      "id": "n4",
+      "name": "Extract CSV",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        500,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\nconst pick = (row, names) => {\n  const keys = Object.keys(row);\n  for (const n of names) {\n    const k = keys.find(k => k.trim().toLowerCase() === n);\n    if (k) return row[k];\n  }\n  return '';\n};\nconst pad = n => String(n).padStart(2, '0');\nfunction normDate(v) {\n  if (v === null || v === undefined || v === '') return '';\n  if (typeof v === 'number' && v > 20000 && v < 80000) { // serial Excel/Sheets\n    const d = new Date(Math.round((v - 25569) * 86400 * 1000));\n    return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate());\n  }\n  const s = String(v).trim().split(/[ T]/)[0];\n  let m;\n  if ((m = s.match(/^(\\d{4})[-\\/.](\\d{1,2})[-\\/.](\\d{1,2})$/))) return m[1] + '-' + pad(m[2]) + '-' + pad(m[3]);\n  if ((m = s.match(/^(\\d{1,2})[-\\/.](\\d{1,2})[-\\/.](\\d{4})$/))) return m[3] + '-' + pad(m[2]) + '-' + pad(m[1]); // DD/MM/YYYY\n  const d = new Date(String(v));\n  if (!isNaN(d)) return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());\n  return '';\n}\nfunction normNominal(v) {\n  if (v === null || v === undefined) return '';\n  let s = String(v).trim();\n  s = s.replace(/[,.]\\d{1,2}$/, (x) => /^[,.]\\d{2}$/.test(x) ? '' : x); // buang desimal ,00 / .00\n  return s.replace(/[^0-9]/g, ''); // hapus karakter non-numerik\n}\n\nreturn $input.all().map((it, i) => {\n  const r = it.json;\n  const tanggal = normDate(pick(r, [\"tanggal\",\"date\",\"tgl\"]));\n  const nominal = normNominal(pick(r, [\"nominal\",\"amount\",\"jumlah\"]));\n  return { json: {\n    source: 'Internal',\n    row_no: i + 1,\n    id: pick(r, [\"id\",\"id_transaksi\",\"no\"]),\n    tanggal,\n    nominal,\n    deskripsi: pick(r, [\"deskripsi\",\"keterangan\",\"description\"]),\n    match_key: tanggal + '_' + nominal\n  }};\n});"
+      },
+      "id": "n5",
+      "name": "Clean Internal",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "\nconst pick = (row, names) => {\n  const keys = Object.keys(row);\n  for (const n of names) {\n    const k = keys.find(k => k.trim().toLowerCase() === n);\n    if (k) return row[k];\n  }\n  return '';\n};\nconst pad = n => String(n).padStart(2, '0');\nfunction normDate(v) {\n  if (v === null || v === undefined || v === '') return '';\n  if (typeof v === 'number' && v > 20000 && v < 80000) { // serial Excel/Sheets\n    const d = new Date(Math.round((v - 25569) * 86400 * 1000));\n    return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate());\n  }\n  const s = String(v).trim().split(/[ T]/)[0];\n  let m;\n  if ((m = s.match(/^(\\d{4})[-\\/.](\\d{1,2})[-\\/.](\\d{1,2})$/))) return m[1] + '-' + pad(m[2]) + '-' + pad(m[3]);\n  if ((m = s.match(/^(\\d{1,2})[-\\/.](\\d{1,2})[-\\/.](\\d{4})$/))) return m[3] + '-' + pad(m[2]) + '-' + pad(m[1]); // DD/MM/YYYY\n  const d = new Date(String(v));\n  if (!isNaN(d)) return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());\n  return '';\n}\nfunction normNominal(v) {\n  if (v === null || v === undefined) return '';\n  let s = String(v).trim();\n  s = s.replace(/[,.]\\d{1,2}$/, (x) => /^[,.]\\d{2}$/.test(x) ? '' : x); // buang desimal ,00 / .00\n  return s.replace(/[^0-9]/g, ''); // hapus karakter non-numerik\n}\n\nreturn $input.all().map((it, i) => {\n  const r = it.json;\n  const tanggal = normDate(pick(r, [\"tanggal\",\"date\",\"tgl\"]));\n  const nominal = normNominal(pick(r, [\"nominal\",\"amount\",\"jumlah\",\"kredit\",\"debit\"]));\n  return { json: {\n    source: 'Bank',\n    row_no: i + 1,\n    id: pick(r, [\"id\",\"ref\",\"no_referensi\"]),\n    tanggal,\n    nominal,\n    deskripsi: pick(r, [\"keterangan\",\"deskripsi\",\"description\"]),\n    match_key: tanggal + '_' + nominal\n  }};\n});"
+      },
+      "id": "n6",
+      "name": "Clean Bank",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        760,
+        420
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "append"
+      },
+      "id": "n7",
+      "name": "Tunggu Kedua Data (Merge)",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1020,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "const internal = $('Clean Internal').all().map(i => i.json);\nconst bank = $('Clean Bank').all().map(i => i.json);\n\n// index bank per match_key (mendukung transaksi duplikat)\nconst bankMap = {};\nbank.forEach(b => { (bankMap[b.match_key] = bankMap[b.match_key] || []).push(b); });\n\nconst matched = [], missingInBank = [];\ninternal.forEach(t => {\n  const list = bankMap[t.match_key];\n  if (list && list.length) { list.shift(); matched.push({ ...t, status: 'Matched' }); }\n  else missingInBank.push({ ...t, status: 'Missing in Bank' });\n});\nconst unrecorded = [];\nObject.values(bankMap).forEach(l => l.forEach(b => unrecorded.push({ ...b, status: 'Unrecorded Internal' })));\n\nconst rp = n => 'Rp ' + Number(n || 0).toLocaleString('id-ID');\nconst line = x => '- ' + x.tanggal + ' | ' + rp(x.nominal) + ' | ' + (x.deskripsi || x.id || '-');\nconst issues = missingInBank.length + unrecorded.length;\n\nlet msg = 'LAPORAN REKONSILIASI\\n';\nmsg += 'Internal: ' + internal.length + ' | Bank: ' + bank.length + ' | Matched: ' + matched.length + '\\n\\n';\nif (missingInBank.length) msg += 'MISSING IN BANK (ada di Internal, tidak ada di Bank): ' + missingInBank.length + '\\n' + missingInBank.map(line).join('\\n') + '\\n\\n';\nif (unrecorded.length) msg += 'UNRECORDED INTERNAL (ada di Bank, tidak ada di Internal): ' + unrecorded.length + '\\n' + unrecorded.map(line).join('\\n');\n\nreturn [{ json: {\n  has_issue: issues > 0,\n  total_internal: internal.length,\n  total_bank: bank.length,\n  matched_count: matched.length,\n  missing_in_bank_count: missingInBank.length,\n  unrecorded_internal_count: unrecorded.length,\n  message: msg.trim(),\n  matched, missing_in_bank: missingInBank, unrecorded_internal: unrecorded\n}}];"
+      },
+      "id": "n8",
+      "name": "Rekonsiliasi (match_key)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.has_issue }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "n9",
+      "name": "Ada Selisih?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "chatId": "GANTI_DENGAN_CHAT_ID",
+        "text": "={{ $json.message }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "n10",
+      "name": "Telegram Alert",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1740,
+        220
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Start (Manual / ganti Schedule)": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Data Internal",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Google Drive - Mutasi Bank CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Data Internal": {
+      "main": [
+        [
+          {
+            "node": "Clean Internal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Drive - Mutasi Bank CSV": {
+      "main": [
+        [
+          {
+            "node": "Extract CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract CSV": {
+      "main": [
+        [
+          {
+            "node": "Clean Bank",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Internal": {
+      "main": [
+        [
+          {
+            "node": "Tunggu Kedua Data (Merge)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Bank": {
+      "main": [
+        [
+          {
+            "node": "Tunggu Kedua Data (Merge)",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Tunggu Kedua Data (Merge)": {
+      "main": [
+        [
+          {
+            "node": "Rekonsiliasi (match_key)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rekonsiliasi (match_key)": {
+      "main": [
+        [
+          {
+            "node": "Ada Selisih?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ada Selisih?": {
+      "main": [
+        [
+          {
+            "node": "Telegram Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
